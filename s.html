@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sıfır Atık Bilgi Yarışması Sertifikası</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+<style>
+  :root { --yesil:#2E7D32; --koyu:#4B3A26; --krem:#FFF9EC; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; min-height:100%; }
+  body {
+    font-family: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    color: var(--koyu);
+    background: #cfe8b9 url('sertifika/arka.jpg') center top / cover fixed no-repeat;
+    display:flex; flex-direction:column; align-items:center;
+    padding: 18px 16px 32px;
+  }
+  .logo { width: min(260px, 70vw); height:auto; margin: 4px 0 14px;
+          filter: drop-shadow(0 4px 10px rgba(0,0,0,.25)); }
+  .kutu { width: min(760px, 100%); background: rgba(255,249,236,.92); border-radius: 22px;
+          padding: 14px; box-shadow: 0 8px 26px rgba(0,0,0,.22); }
+  #sertifika { display:block; width:100%; height:auto; border-radius: 12px; }
+  h1 { margin: 6px 4px 12px; font-size: clamp(18px, 4.6vw, 26px); font-weight: 900; color: var(--yesil); text-align:center; }
+  .butonlar { display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; }
+  .btn { flex:1 1 200px; border:0; border-radius: 999px; padding: 14px 18px; font: inherit; font-weight: 800;
+         font-size: 17px; color:#fff; background: var(--yesil); cursor:pointer;
+         box-shadow: 0 4px 0 #1b5e20; }
+  .btn.ikincil { background:#F57C00; box-shadow: 0 4px 0 #c25e00; }
+  .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #1b5e20; }
+  .ipucu { font-size: 14px; text-align:center; margin: 12px 4px 0; opacity:.85; }
+  .hata { text-align:center; font-weight:800; padding: 30px 10px; }
+</style>
+</head>
+<body>
+  <img class="logo" src="sertifika/logo.png" alt="Sıfır Atık Vakfı">
+  <div class="kutu">
+    <h1>Tebrikler! Sertifikan hazır 🎉</h1>
+    <img id="sertifika" alt="Sıfır Atık Bilgi Yarışması Sertifikası">
+    <div class="butonlar" id="butonlar">
+      <button class="btn" id="pngBtn">Görsel Olarak İndir</button>
+      <button class="btn ikincil" id="pdfBtn" hidden>PDF Olarak İndir</button>
+    </div>
+    <p class="ipucu">İndirme başlamazsa sertifika görseline basılı tutup “Fotoğraflara Kaydet” diyebilirsin.</p>
+  </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+<script>
+(function () {
+  // URL: s.html?a=Ad%20Soyad&t=26.09.2026%20-%2012%3A29&n=15&d=12&p=545
+  var q = new URLSearchParams(location.search);
+  var ad = (q.get('a') || '').trim() || 'Misafir';
+  var tarih = (q.get('t') || '').trim();
+  var toplam = parseInt(q.get('n') || '0', 10) || 0;
+  var dogru = parseInt(q.get('d') || '0', 10) || 0;
+  var puan = parseInt(q.get('p') || '0', 10) || 0;
+  var oran = toplam > 0 ? Math.round(100 * dogru / toplam) : 0;
+
+  var img = document.getElementById('sertifika');
+  if (!q.get('n') && !q.get('p')) {
+    document.querySelector('.kutu').innerHTML =
+      '<div class="hata">Sertifika bilgisi bulunamadı.<br>Lütfen oyun ekranındaki QR kodu yeniden okut.</div>';
+    return;
+  }
+
+  var kart = new Image();
+  kart.src = 'sertifika/kart.png';
+
+  var S = 2;                 // çıktı çözünürlüğü (kart 983x483 -> 1966x966)
+  var W = 983, H = 483;
+  var canvas = document.createElement('canvas');
+  canvas.width = W * S; canvas.height = H * S;
+  var c = canvas.getContext('2d');
+
+  function yaziSigdir(metin, x, y, maxW, boyut, agirlik, renk) {
+    var b = boyut;
+    do {
+      c.font = agirlik + ' ' + b + 'px Nunito, system-ui, sans-serif';
+      if (c.measureText(metin).width <= maxW || b <= 12) break;
+      b -= 1;
+    } while (true);
+    c.fillStyle = renk;
+    c.fillText(metin, x, y);
+  }
+
+  function ciz() {
+    c.setTransform(S, 0, 0, S, 0, 0);
+    c.imageSmoothingQuality = 'high';
+    c.drawImage(kart, 0, 0, W, H);
+    c.textBaseline = 'middle';
+
+    // Başlık
+    c.textAlign = 'center';
+    yaziSigdir('Sıfır Atık Bilgi Yarışması', 470, 92, 420, 30, '800', '#5B3B1A');
+    yaziSigdir('SERTİFİKASI', 470, 132, 420, 40, '900', '#2E7D32');
+
+    // Alanlar (kartın çizgili satırları)
+    var satirlar = [
+      ['Ad Soyad:', ad],
+      ['Katılım Tarihi:', tarih],
+      ['Toplam Soru Sayısı:', String(toplam)],
+      ['Doğru Cevap Sayısı:', String(dogru)],
+      ['Başarı Oranı:', '%' + oran],
+      ['Toplam Skor:', String(puan)]
+    ];
+    var ys = [224, 264, 304, 344, 384, 424];
+    c.textAlign = 'left';
+    // Tüm etiketler aynı boyutta: en uzun etiketin sığdığı puntoyu kullan
+    var etiketBoyut = 21;
+    for (var k = 0; k < satirlar.length; k++) {
+      c.font = '900 ' + etiketBoyut + 'px Nunito, system-ui, sans-serif';
+      while (c.measureText(satirlar[k][0]).width > 215 && etiketBoyut > 12) {
+        etiketBoyut -= 1;
+        c.font = '900 ' + etiketBoyut + 'px Nunito, system-ui, sans-serif';
+      }
+    }
+    for (var i = 0; i < satirlar.length; i++) {
+      c.font = '900 ' + etiketBoyut + 'px Nunito, system-ui, sans-serif';
+      c.fillStyle = '#4B3A26';
+      c.fillText(satirlar[i][0], 128, ys[i]);
+      yaziSigdir(satirlar[i][1], 355, ys[i], 285, etiketBoyut + 1, '700', '#4B3A26');
+    }
+
+    img.src = canvas.toDataURL('image/png');
+  }
+
+  function hazirla() {
+    var fontHazir = (document.fonts && document.fonts.load)
+      ? Promise.all([document.fonts.load('900 20px Nunito'), document.fonts.load('700 20px Nunito')]).catch(function(){})
+      : Promise.resolve();
+    var kartHazir = new Promise(function (ok) {
+      if (kart.complete && kart.naturalWidth) ok(); else { kart.onload = ok; kart.onerror = ok; }
+    });
+    Promise.all([fontHazir, kartHazir]).then(ciz);
+  }
+  hazirla();
+
+  var dosyaAdi = 'SifirAtik_Sertifika_' + ad.replace(/[^\wçğıöşüÇĞİÖŞÜ]+/g, '_');
+
+  function indir(url, ad) {
+    var a = document.createElement('a');
+    a.href = url; a.download = ad;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  document.getElementById('pngBtn').addEventListener('click', function () {
+    if (canvas.toBlob) {
+      canvas.toBlob(function (b) {
+        var u = URL.createObjectURL(b);
+        indir(u, dosyaAdi + '.png');
+        setTimeout(function () { URL.revokeObjectURL(u); }, 4000);
+      }, 'image/png');
+    } else indir(canvas.toDataURL('image/png'), dosyaAdi + '.png');
+  });
+
+  window.addEventListener('load', function () {
+    if (!window.jspdf || !window.jspdf.jsPDF) return;
+    var pdfBtn = document.getElementById('pdfBtn');
+    pdfBtn.hidden = false;
+    pdfBtn.addEventListener('click', function () {
+      var doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: [W, H] });
+      doc.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, W, H);
+      doc.save(dosyaAdi + '.pdf');
+    });
+  });
+})();
+</script>
+</body>
+</html>
